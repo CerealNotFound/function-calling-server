@@ -1,5 +1,4 @@
-import { ChatOpenAI } from "langchain/chat_models/openai";
-import { HumanMessage } from "langchain/schema";
+import OpenAI from "openai";
 
 /*API format 
  {
@@ -13,15 +12,18 @@ import { HumanMessage } from "langchain/schema";
     dateTIme: endDateTime,
     timeZone: timeZone,
   },
-  attendees: attendees,
+  attendees:[
+  {
+    name: name,
+    email: email,
+  }],
  }
 */
 
-//below is the function schema, or in other words, the structure defined below will be given to the AI as the “function” that it will give us the information about, in order to be able to call it
 const scheduleMeetSchema = {
   name: "scheduleGoogleMeet",
   description:
-    "schedules a Google Meet event and adds it to the user's Google Calendar with optional conference data for Google Meet integration. It sets up the event with a summary, description, start/end times, timezone, and attendee emails.",
+    "schedules a Google Meet event and adds it to the user's Google Calendar with optional conference data for Google Meet integration. It sets up the event with a summary, description, start/end times, timezone, and attendees.",
   parameters: {
     type: "object",
     properties: {
@@ -45,42 +47,70 @@ const scheduleMeetSchema = {
         type: "string",
         description: "the timezone of the start and end times for the event",
       },
-      attendeesString: {
+      attendees: {
         type: "array",
         items: {
-          type: "string",
-          description: "an array of email addresses for the event attendees",
+          type: "object",
+          properties: {
+            name: {
+              type: "string",
+              description: "the name of the meeting's attendee",
+            },
+            email: {
+              type: "string",
+              description: "the corresponding email of the meeting's attendee",
+            },
+          },
+          description:
+            "an object consisting of the names and corresponding emails of the meeting's attendees",
         },
-        description: "the list of attendees to be invited to the meeting event",
+        description:
+          "an array of the attendees for the event that consists of objects where each object represents an attendee",
+      },
+      eventType: {
+        type: "string",
+        enum: ["solo", "duo", "multiple"],
+        description:
+          "the type of event where if there are no attendees, its solo (since the host will be there by default), with one attendee it will be a duo and else 'multiple'",
       },
     },
-    required: ["summary", "startDateTime", "endDateTime", "timeZone"],
+    required: [
+      "summary",
+      "startDateTime",
+      "endDateTime",
+      "timeZone",
+      "eventType",
+    ],
   },
 };
 
-/* Below we instantiate (OOP, haha!) ChatOpenAI class (create an instance of OpenAI’s API that has a well-defined structure with some set functions), and bind function arguments to the model (binding a function to this class attaches the arguments passed in all future calls, meaning the AI will already have these things available to it on the next calls to the model) */
+const messages = [{ role: "system", content: "You are a helpful assistant" }];
+
+/* const assistant = await openai.beta.assistants.create({
+  name: “AgentProd”,
+  instructions: “You are a helpful assistant tasked with creating”
+}) */
+
+const tools = [
+  {
+    type: "function",
+    function: scheduleMeetSchema,
+  },
+];
 
 export const scheduleMeet = async (req, res) => {
+  const openai = new OpenAI();
   const prompt = req.body.prompt;
-
-  const model = new ChatOpenAI({
-    model: "gpt-4-1106-preview",
-  }).bind({
-    functions: [scheduleMeetSchema],
-    function_call: { name: "scheduleGoogleMeet" },
-  });
-
-  /* 
-      Now we can call the model without having to pass the function arguments in again! (‘cause we “bind”-ed the function to the OpenAI chat instance!)
-    
-      According to LangChain, we can simply do this:
-      const result = await model.invoke([new HumanMessage(“schedule a google meet with title as Discussion and summary as discussion about the latest AI event. Schedule for 2PM IST on 20dec. Invite info@agentprod.com and someone@agentprod.com to the meeting”)])
-    
-      But, we need to be able to call a function! So, I presume that we can wrap this call in a function, and then export it!
-     */
+  messages.push({ role: "user", content: prompt });
 
   try {
-    const result = await model.invoke([new HumanMessage(prompt)]);
+    const result = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo-1106",
+      messages: messages,
+      tools: tools,
+      tool_choice: "auto", //we could skip this
+    });
+    messages.push({ role: "assistant", content: result.choices[0].message });
     console.log(result);
     res.status(200).send(result);
   } catch (err) {
