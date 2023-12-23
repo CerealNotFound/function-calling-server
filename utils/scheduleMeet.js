@@ -1,5 +1,3 @@
-import OpenAI from "openai";
-
 /*API format 
 
   The API format has been updated to include objects nested inside an array that have been used to signify attendees (names, corresponding emails) for the meeting instead of having an array of emails (strings)
@@ -25,13 +23,12 @@ import OpenAI from "openai";
   {
     name: name,
     email: email,
-  },
-  eventType: string
-],
+  }],
+  eventType: string,
  }
 */
 
-const scheduleMeetSchema = {
+export const scheduleMeetSchema = {
   name: "scheduleGoogleMeet",
   description:
     "schedules a Google Meet event and adds it to the user's Google Calendar with optional conference data for Google Meet integration. It sets up the event with a summary, description, start/end times, timezone, and attendees.",
@@ -93,45 +90,4 @@ const scheduleMeetSchema = {
       "eventType",
     ],
   },
-};
-
-//create a messages array below that could simulate context window, and keeps track of the chats
-const messages = [{ role: "system", content: "You are a helpful assistant" }];
-
-//defined an array of tools, here, only a function object where the function's structure/schema is defined as a variable for cleanliness/convience
-const tools = [
-  {
-    type: "function",
-    function: scheduleMeetSchema,
-  },
-];
-
-export const scheduleMeet = async (req, res) => {
-  const openai = new OpenAI();
-  const prompt = req.body.prompt;
-
-  messages.push({ role: "user", content: prompt });
-
-  /*
-  Above we simply instantiate an OpenAI class instance that automatically picks up the API key stored in .env. 
-  The prompt is extracted from the request. The messages array is then appended with an object that sets up the user's query that can then be taken by the AI
-
-  Later in the code, we append the result into the messages array so as to update the context window.
- */
-
-  try {
-    const result = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo-1106",
-      messages: messages,
-      tools: tools,
-      tool_choice: "auto", //we could skip this as this is the default value
-    });
-
-    messages.push({ role: "assistant", content: result.choices[0].message });
-    console.log(result);
-    res.status(200).send(result);
-  } catch (err) {
-    console.log(err);
-    return res.status(500).send(`function calling failed, err: ${err}`);
-  }
 };
