@@ -21,53 +21,63 @@ export const createContactSchema = {
   parameters: {
     type: "object",
     properties: {
-      properties: {
-        type: "object",
-        description: "object containing all the required parameters",
-        properties: {
-          email: {
-            type: "string",
-            description: "corresponding email of the contact",
-          },
-          firstname: {
-            type: "string",
-            description: "first name of the contact",
-          },
-          lastname: {
-            type: "string",
-            description: "last name of the contact",
-          },
-          phone: {
-            type: "string",
-            description:
-              "phone number of the contact with the country code. example: +91 1234567890",
-          },
-          company: {
-            type: "string",
-            description:
-              "name of the company that the contact is associated with",
-          },
-          website: {
-            type: "string",
-            description: "url of the website of the contact",
-          },
-          lifecyclestage: {
-            type: "string",
-            enum: [
-              "subscriber",
-              "lead",
-              "marketingqualifiedlead",
-              "salesqualifiedlead",
-              "opportunity",
-              "customer",
-              "evangelist",
-              "other",
-            ],
-          },
-        },
+      email: {
+        type: "string",
+        description: "corresponding email of the contact",
+      },
+      firstname: {
+        type: "string",
+        description: "first name of the contact",
+      },
+      lastname: {
+        type: "string",
+        description: "last name of the contact",
+      },
+      phone: {
+        type: "string",
+        description:
+          "phone number of the contact with the country code. example: +91 1234567890",
+      },
+      company: {
+        type: "string",
+        description: "name of the company that the contact is associated with",
+      },
+      website: {
+        type: "string",
+        description: "url of the website of the contact",
+      },
+      lifecyclestage: {
+        type: "string",
+        enum: [
+          "subscriber",
+          "lead",
+          "marketingqualifiedlead",
+          "salesqualifiedlead",
+          "opportunity",
+          "customer",
+          "evangelist",
+          "other",
+        ],
         description: "customer lifecycle stage of the contact",
       },
     },
     required: ["firstname", "email"],
   },
 };
+
+export const createContact = async () => {
+  const crmResponse = await fetch(
+    "https://api.hubapi.com/crm/v3/objects/contacts",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.HUBSPOT_ACCESS_TOKEN}`,
+      },
+      body: contactArgs,
+    }
+  );
+  console.log(crmResponse);
+};
+
+// result.choices[0].message.tool_calls[0].function.name

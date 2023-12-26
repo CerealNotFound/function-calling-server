@@ -38,33 +38,11 @@ export const functionCall = async (req, res) => {
       tool_choice: "auto", //we could skip this as this is the default value
     });
 
-    if (
-      result.choices[0].message.tool_calls[0].function.name == "createContact"
-    ) {
-      const contactArgs =
-        result.choices[0].message.tool_calls[0].function.arguments;
-      console.log(contactArgs);
-      // const body = {
-      //   properties: contactArgs,
-      // };
-      // console.log(process.env.HUBSPOT);
-      // console.log(body);
-      const crmResponse = await fetch(
-        "https://api.hubapi.com/crm/v3/objects/contacts",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${process.env.HUBSPOT_ACCESS_TOKEN}`,
-          },
-          body: contactArgs,
-        }
-      );
+    const functionArguments =
+      result.choices[0].message.tool_calls[0].function.arguments;
+    console.log(JSON.parse(functionArguments));
 
-      console.log(crmResponse);
-    }
-
-    messages.push({ role: "assistant", content: result.choices[0].message });
+    // messages.push({ role: "assistant", content: result.choices[0].message });
     console.log(result);
     res.status(200).send(result);
   } catch (err) {

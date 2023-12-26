@@ -91,3 +91,18 @@ export const scheduleMeetSchema = {
     ],
   },
 };
+
+export const scheduleGoogleMeet = (meetArgs) => {
+  return `
+  Meeting scheduled successfully. Details:
+    summary: ${meetArgs.summary}
+    description: ${
+      meetArgs.description ? meetArgs.description : "Not Specified"
+    }
+    startDateTime: ${meetArgs.startDateTime}
+    endDateTime: ${meetArgs.endDateTime}
+    timeZone: ${meetArgs.timeZone}
+    attendees: ${meetArgs.attendees ? meetArgs.attendees : "No other attendees"}
+    eventType: ${meetArgs.eventType}
+  `;
+};
