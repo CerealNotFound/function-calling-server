@@ -1,20 +1,22 @@
-const { google } = require("googleapis");
-const { oAuth2Client } = require("../auth/googleClient.js");
+const { google } = require('googleapis');
+const { oAuth2Client } = require('../auth/googleClient.js');
 
-async function findSpreadsheetIdByTitle(title) {
+//below function only works for exact titles
+async function findSpreadsheetIdByTitle(params) {
+  const { title, auth } = params;
   try {
-    const oAuth2Client = getGoogleClient(); // Ensure this function provides authenticated Google client
-    const drive = google.drive({ version: "v3", auth: oAuth2Client });
+    const drive = google.drive({ version: 'v3', auth: auth });
 
     const response = await drive.files.list({
       q: `mimeType='application/vnd.google-apps.spreadsheet' and name='${title}'`,
-      fields: "files(id, name)",
-      spaces: "drive",
+      fields: 'files(id, name)',
+      spaces: 'drive',
     });
 
     const files = response.data.files;
     if (files.length === 0) {
-      return JSON.stringify({ message: "No files found." });
+      console.log('no files found');
+      return JSON.stringify({ message: 'No files found.' });
     } else {
       const result = {
         message: `Found spreadsheet: ${files[0].name} with ID: ${files[0].id}`,
@@ -32,7 +34,7 @@ async function findSpreadsheetIdByTitle(title) {
 }
 
 async function createSheet(auth, title) {
-  const sheets = google.sheets({ version: "v4", auth });
+  const sheets = google.sheets({ version: 'v4', auth });
   const resource = {
     properties: {
       title,
@@ -42,11 +44,11 @@ async function createSheet(auth, title) {
   try {
     const response = await sheets.spreadsheets.create({
       resource,
-      fields: "spreadsheetId",
+      fields: 'spreadsheetId',
     });
 
     const result = {
-      message: "the google sheet was created",
+      message: 'the google sheet was created',
       details: response,
     };
 
@@ -55,22 +57,22 @@ async function createSheet(auth, title) {
     if (error.message) {
       result = { error: error.message };
     } else {
-      result = { error: "An unknown error occurred", details: error };
+      result = { error: 'An unknown error occurred', details: error };
     }
     return JSON.stringify(result);
   }
 }
 
 async function updateSheet(auth, spreadsheetId) {
-  const sheets = google.sheets({ version: "v4", auth });
-  const range = "Sheet1"; // Specify the sheet name and range here
-  const valueInputOption = "USER_ENTERED"; // Options are RAW or USER_ENTERED
+  const sheets = google.sheets({ version: 'v4', auth });
+  const range = 'Sheet1'; // Specify the sheet name and range here
+  const valueInputOption = 'USER_ENTERED'; // Options are RAW or USER_ENTERED
 
   // Dummy data to be updated in the specified range
   const values = [
-    ["Name", "Age", "City"], // Header row
-    ["Alice", 30, "New York"],
-    ["Bob", 22, "Los Angeles"],
+    ['Name', 'Age', 'City'], // Header row
+    ['Alice', 30, 'New York'],
+    ['Bob', 22, 'Los Angeles'],
     // Add more rows as needed
   ];
 
@@ -87,7 +89,7 @@ async function updateSheet(auth, spreadsheetId) {
     });
 
     const result = {
-      message: "The google sheet was updated successfully",
+      message: 'The google sheet was updated successfully',
       details: response,
     };
 
@@ -97,25 +99,24 @@ async function updateSheet(auth, spreadsheetId) {
     if (error.message) {
       result = { error: error.message };
     } else {
-      result = { error: "An unknown error occurred", details: error };
+      result = { error: 'An unknown error occurred', details: error };
     }
     return JSON.stringify(result);
   }
 }
 
-updateSheet(oAuth2Client, "1Ob58WbPibT2j2XQggNJnXm20xlBEtfHRqvH0xVYEaP4");
-
 async function shareSheet(params) {
   try {
-    const drive = google.drive({ version: "v3", auth: oAuth2Client });
-    const { fileId, email, role } = params;
+    const { fileId, email, role, emailMessage, auth } = params;
+    const drive = google.drive({ version: 'v3', auth: auth });
     await drive.permissions.create({
       fileId: fileId,
       requestBody: {
         role: role,
-        type: "user",
+        type: 'user',
         emailAddress: email,
       },
+      emailMessage: emailMessage,
     });
 
     const result = {
@@ -133,8 +134,8 @@ async function shareSheet(params) {
 
 async function readSheet(params) {
   try {
-    const sheets = google.sheets({ version: "v4", auth: oAuth2Client });
-    const { spreadsheetId, range } = params;
+    const { spreadsheetId, range, auth } = params;
+    const sheets = google.sheets({ version: 'v4', auth: auth });
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: spreadsheetId,
       range: range,
@@ -152,12 +153,12 @@ async function readSheet(params) {
 
 async function appendSheet(params) {
   try {
-    const sheets = google.sheets({ version: "v4", auth: oAuth2Client });
-    const { spreadsheetId, range, valueInputOption, values } = params;
+    const { spreadsheetId, range, valueInputOption, values, auth } = params;
+    const sheets = google.sheets({ version: 'v4', auth: auth });
     await sheets.spreadsheets.values.append({
       spreadsheetId: spreadsheetId,
       range: range,
-      valueInputOption: valueInputOption || "USER_ENTERED",
+      valueInputOption: valueInputOption || 'USER_ENTERED',
       resource: { values: values },
     });
 
@@ -172,30 +173,34 @@ async function appendSheet(params) {
   }
 }
 
+// spreadsheetId: '1Ob58WbPibT2j2XQggNJnXm20xlBEtfHRqvH0xVYEaP4',
+
 async function clearSheet(params) {
   try {
-    const sheets = google.sheets({ version: "v4", auth: oAuth2Client });
-    const { spreadsheetId, range } = params;
+    const { spreadsheetId, range, auth } = params;
+    const sheets = google.sheets({ version: 'v4', auth: auth });
     await sheets.spreadsheets.values.clear({
       spreadsheetId: spreadsheetId,
       range: range,
     });
 
     const result = { message: `Cleared data from range: ${range}` };
+    console.log(result);
     return JSON.stringify(result);
   } catch (error) {
     const result = {
       error: `The API returned an error: ${error.message}`,
       details: error,
     };
+    console.log(result);
     return JSON.stringify(result);
   }
 }
 
 async function createChart(params) {
   try {
-    const sheets = google.sheets({ version: "v4", auth: oAuth2Client });
-    const { spreadsheetId, chartSpec } = params;
+    const { spreadsheetId, chartSpec, auth } = params;
+    const sheets = google.sheets({ version: 'v4', auth: auth });
     const request = {
       requests: [{ addChart: { chart: chartSpec } }],
     };
@@ -208,19 +213,21 @@ async function createChart(params) {
     const result = {
       message: `Chart created with ID: ${response.data.replies[0].addChart.chart.chartId}`,
     };
+    console.log(result);
     return JSON.stringify(result);
   } catch (error) {
     const result = {
       error: `The API returned an error: ${error.message}`,
       details: error,
     };
+    console.log(result);
     return JSON.stringify(result);
   }
 }
 
 async function updateChart(params) {
   try {
-    const sheets = google.sheets({ version: "v4", auth: oAuth2Client });
+    const sheets = google.sheets({ version: 'v4', auth: oAuth2Client });
     const { spreadsheetId, chartId, newChartSpec } = params;
     const request = {
       requests: [{ updateChartSpec: { chartId: chartId, spec: newChartSpec } }],
@@ -244,7 +251,7 @@ async function updateChart(params) {
 
 async function deleteChart(params) {
   try {
-    const sheets = google.sheets({ version: "v4", auth: oAuth2Client });
+    const sheets = google.sheets({ version: 'v4', auth: oAuth2Client });
     const { spreadsheetId, chartId } = params;
     const request = {
       requests: [{ deleteEmbeddedObject: { objectId: chartId } }],
